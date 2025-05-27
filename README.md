@@ -30,12 +30,8 @@ cd express
 ```
 npm install
 ```
-4. 创建MySQL数据库
-```
-CREATE DATABASE express_app;
-```
 
-5. 启动服务
+3. 启动服务
 ```
 npm run dev
 ```

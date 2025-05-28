@@ -115,7 +115,7 @@ exports.getRoleById = async (roleId) => {
       return {
         success: false,
         message: '未找到角色',
-        statusCode: 404
+        statusCode: 500
       };
     }
     
@@ -138,7 +138,7 @@ exports.updateRole = async (roleId, updateData) => {
       return {
         success: false,
         message: '未找到角色',
-        statusCode: 404
+        statusCode: 500
       };
     }
     

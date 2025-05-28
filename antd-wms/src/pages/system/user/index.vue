@@ -51,8 +51,9 @@
         </template>
         <template v-else-if="column.key === 'operation'">
           <a-button style="padding: 0;" type="link" @click="open(record)">编辑</a-button>
+          <a-button  type="link" @click="handleResetPassword(record)" v-if="isAdmin && record.id !== 1">重置密码</a-button>
           <a-popconfirm title="确定删除吗?" @confirm="onDelete(record.id)">
-            <a-button type="link" danger v-if="isAdmin && record.id !== 1">删除</a-button>
+            <a-button type="link" style="padding: 0;" danger v-if="isAdmin && record.id !== 1">删除</a-button>
           </a-popconfirm>
         </template>
       </template>
@@ -67,7 +68,7 @@
 import { PlusOutlined } from '@ant-design/icons-vue';
 import { ref, onMounted, computed } from 'vue';
 import { message } from 'ant-design-vue';
-import { list, del, updateStatus } from '~/api/user'
+import { list, del, updateStatus, resetPassword } from '~/api/user'
 import { zdList } from '~/api/role'
 import { useUserStore } from '~/stores/user'
 import Edit from './components/Edit.vue';
@@ -162,6 +163,19 @@ const toggleStatus = async (record) => {
 const open = (record = {}) => {
   editRef.value.open(record)
 }
+
+// 处理重置密码
+const handleResetPassword = async (record) => {
+  try {
+    await resetPassword({
+      id: record.id
+    })
+    message.success('密码已重置为：user123')
+  } catch (error) {
+    console.error(error)
+  }
+}
+
 const columns = [
   {
     title: '序号',
@@ -198,7 +212,7 @@ const columns = [
     title: '操作',
     key: 'operation',
     fixed: 'right',
-    width: 200,
+    width: 230,
   },
 ];
 </script>

@@ -1,7 +1,7 @@
 import type { LayoutSetting } from '~@/stores/app'
 
 export default {
-  title: '旅游线路智推系统',
+  title: '管理系统',
   theme: 'light',
   logo: 'https://gw.alipayobjects.com/zos/rmsportal/KDpgvguMpGfqaHPjicRK.svg',
   collapsed: false,

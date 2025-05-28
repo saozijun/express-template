@@ -6,7 +6,6 @@ import { login, register } from '~/api/common/login'
 import { useAuthorization } from '~/composables/authorization'
 import { useUserStore } from '~@/stores/user'
 import { notification } from 'ant-design-vue';
-import { zdList } from '~/api/role'
 
 const token = useAuthorization()
 const captchaImg = ref( import.meta.env.VITE_APP_BASE_URL + '/captcha');
@@ -17,11 +16,8 @@ const loginModel = reactive({
   username: undefined,
   password: undefined,
   code: undefined,
-  nickname: undefined,
-  roleId: undefined
+  nickname: undefined
 })
-const roleList = ref([])
-const role = ref(null)
 const loginStatus = ref('登录')
 const data = reactive(['登录', '注册']);
 const formRef = shallowRef()
@@ -29,36 +25,9 @@ const codeLoading = shallowRef(false)
 const resetCounter = 60
 const submitLoading = shallowRef(false)
 
-// 加载角色列表
-const loadRoleList = async () => {
-  try {
-    const { data } = await zdList()
-    roleList.value = data
-  } catch (error) {
-    console.error('获取角色列表失败:', error)
-  }
-}
-
-watch(loginStatus, async (val) => {
+watch(loginStatus, (val) => {
   formRef.value?.resetFields()
-  if (val === '注册') {
-    await loadRoleList()
-  }
 })
-
-const setRole = (val) => {
-  if (role.value != val) {
-    formRef.value?.resetFields()
-    loginModel.username = undefined
-    loginModel.password = undefined
-    loginModel.code = undefined
-    loginStatus.value = '登录'
-  }
-  role.value = val
-}
-const changeSrc = async () => {
-  captchaImg.value = captchaImg.value + '?d='+Date.now()
-};
 
 const { counter, pause, reset, resume, isActive } = useInterval(1000, {
   controls: true,
@@ -111,15 +80,10 @@ const submit = async () => {
         router.replace('/')
       }, 100)
     } else {
-      // 获取选择的角色信息
-      const selectedRole = roleList.value.find(r => r.id === loginModel.roleId)
-      
       let registerData = {
         nickname: loginModel.nickname,
         username: loginModel.username,
-        password: loginModel.password,
-        roleId: loginModel.roleId,
-        role: selectedRole ? selectedRole.flag : 'user'
+        password: loginModel.password
       }
       
       const { data } = await register(registerData)
@@ -130,17 +94,7 @@ const submit = async () => {
       })
       loginStatus.value = '登录'
     }
-  }
-  catch (e) {
-    changeSrc()
-    notification.error({
-      message: '操作失败',
-      description: e.message || '请检查输入信息',
-      duration: 3
-    })
-    console.warn(e)
-  }
-  finally {
+  } catch (e) {} finally {
     submitLoading.value = false
   }
 }
@@ -189,31 +143,6 @@ const submit = async () => {
                     <LockOutlined />
                   </template>
                 </a-input-password>
-              </a-form-item>
-              
-              <a-form-item name="roleId" :rules="[{ required: true, message: '请选择角色' }]" v-if="loginStatus === '注册'">
-                <a-select v-model:value="loginModel.roleId" size="large" placeholder="请选择角色">
-                  <a-select-option v-for="item in roleList" :value="item.id" :key="item.id">
-                    {{item.name}}
-                  </a-select-option>
-                </a-select>
-              </a-form-item>
-
-              <a-form-item name="code" :rules="[{ required: true, message: '请输入验证码' }]" v-if="false && loginStatus === '登录'">
-                <div class="captcha-wrapper">
-                  <a-input
-                    v-model:value="loginModel.code"
-                    size="large"
-                    placeholder="请输入验证码"
-                    style="width: 60%"
-                  />
-                  <img
-                    :src="captchaImg"
-                    alt="验证码"
-                    class="captcha-image"
-                    @click="changeSrc"
-                  />
-                </div>
               </a-form-item>
 
               <a-form-item>

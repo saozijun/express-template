@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Role = require('../models/Role');
 
 /**
  * 认证业务逻辑层
@@ -31,13 +32,23 @@ exports.register = async (userData) => {
       }
     }
     
+    // 获取默认用户角色(user)
+    const userRole = await Role.findOne({ where: { name: 'user' } });
+    if (!userRole) {
+      return {
+        success: false,
+        message: '系统错误：未找到默认用户角色',
+        statusCode: 500
+      };
+    }
+    
     // 创建用户
     const user = await User.create({
       username,
       email,
       password,
       nickname: userData.nickname || username,
-      roleId: userData.roleId
+      roleId: userRole.id // 使用默认user角色ID
     });
     
     // 生成token
@@ -46,7 +57,7 @@ exports.register = async (userData) => {
     return {
       success: true,
       token,
-      statusCode: 201
+      statusCode: 200
     };
   } catch (error) {
     console.error('用户注册错误:', error);
@@ -88,8 +99,8 @@ exports.login = async (credentials) => {
     if (!user) {
       return {
         success: false,
-        message: '无效的凭据',
-        statusCode: 401
+        message: '用户不存在',
+        statusCode: 500
       };
     }
     
@@ -98,8 +109,8 @@ exports.login = async (credentials) => {
     if (!isMatch) {
       return {
         success: false,
-        message: '无效的凭据',
-        statusCode: 401
+        message: '密码错误',
+        statusCode: 500
       };
     }
     
@@ -108,7 +119,7 @@ exports.login = async (credentials) => {
       return {
         success: false,
         message: '账号已被禁用，请联系管理员',
-        statusCode: 403
+        statusCode: 500
       };
     }
     
@@ -155,7 +166,7 @@ exports.getMe = async (userId) => {
       return {
         success: false,
         message: '用户不存在',
-        statusCode: 404
+        statusCode: 500
       };
     }
     

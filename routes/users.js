@@ -11,7 +11,9 @@ const {
   uploadAvatar,
   updateUserStatus,
   getUsersPage,
-  createUser
+  createUser,
+  changePassword,
+  resetPassword
 } = require('../controllers/userController');
 
 // 创建头像上传目录
@@ -53,11 +55,14 @@ router.get("/page", protect, isUser, getUsersPage); // 使用专门的分页查�
 router.get("/detail/:id", protect, isUser, getUserById);
 router.post("/add", protect, isAdmin, createUser); // 新增用户接口，仅管理员可访问
 router.post("/save", protect, updateUser);
+router.post("/update", protect, updateUser);
 router.post("/delete", protect, deleteUser);
 router.post("/status", protect, isAdmin, updateUserStatus);
+router.post("/change-password", protect, changePassword); // 修改密码接口
+router.post("/reset-password", protect, isAdmin, resetPassword); // 重置密码接口，仅管理员可访问
 
 // 头像上传路由
-router.post("/upload/avatar", protect, avatarUpload.single('avatar'), uploadAvatar);
+router.post("/upload/avatar", protect, avatarUpload.single('file'), uploadAvatar);
 
 // 兼容旧路由
 router.get("/", protect, isUser, getAllUsers);

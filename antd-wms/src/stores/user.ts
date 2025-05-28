@@ -1,19 +1,28 @@
 import type { MenuData } from '~@/layouts/basic-layout/typing'
-import dynamicRoutes, { rootRoute, getRoutesByRole } from '~@/router/dynamic-routes'
+import { rootRoute, getRoutesByRole } from '~@/router/dynamic-routes'
 import { genRoutes } from '~@/router/generate-route'
 import { updateInfo } from '~@/api/user'
-import { useRouter } from 'vue-router'
+
 
 export const useUserStore = defineStore('user', () => {
   const routerData = shallowRef()
   const menuData = shallowRef<MenuData>([])
-  
-  // 使用 useStorage 持久化存储用户信息
+  const baseUrl = import.meta.env.VITE_APP_BASE_URL
   const userInfo: any = useStorage('user-info', {})
 
-  const avatar = computed(() => userInfo.value.avatarUrl && userInfo.value.avatarUrl != "" ? userInfo.value.avatarUrl : 'https://gw.alipayobjects.com/zos/rmsportal/BiazfanxmamNRoxxVxka.png')
-  const nickname = computed(() => userInfo.value.nickname ?? userInfo.value.username)
-  const role = computed(() => userInfo.value.role || 'guest')
+  const avatar = computed(() => {
+    return baseUrl + userInfo.value.avatar 
+  })
+  
+  const nickname = computed(() => {
+    if (!userInfo.value) return ''
+    return userInfo.value.nickname ?? userInfo.value.username ?? ''
+  })
+  
+  const role = computed(() => {
+    if (!userInfo.value) return 'guest'
+    return userInfo.value.role || 'guest'
+  })
 
   const generateRoutes = async () => {
     const userRole = role.value
@@ -35,12 +44,20 @@ export const useUserStore = defineStore('user', () => {
 
   // 更新用户信息
   const updateAvatar = async (url: any) => {
-    userInfo.value.avatarUrl = url
-    await updateInfo(userInfo.value)
+    if (!userInfo.value) userInfo.value = {}
+    userInfo.value.avatarUrl = url;
+    // 确保更新到数据库
+    try {
+      await updateInfo({
+        id: userInfo.value.id,
+        avatarUrl: url
+      });
+    } catch (error) {}
   }
 
   // 更新用户基本信息
   const updateUserInfo = async (data: any) => {
+    if (!userInfo.value) userInfo.value = {}
     userInfo.value = { ...userInfo.value, ...data }
     return userInfo.value
   }

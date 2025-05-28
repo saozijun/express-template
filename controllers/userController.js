@@ -107,7 +107,7 @@ exports.updateUser = async (req, res) => {
     const isAdmin = req.user.role && req.user.role.name === 'admin';
     
     if (!isOwnAccount && !isAdmin) {
-      return error(res, '没有权限更新此用户', 401);
+      return error(res, '没有权限更新此用户', 500);
     }
     
     const result = await userService.updateUser(req.body.id || req.params.id, req.body);
@@ -134,7 +134,7 @@ exports.deleteUser = async (req, res) => {
     const isAdmin = req.user.role && req.user.role.name === 'admin';
     
     if (!isOwnAccount && !isAdmin) {
-      return error(res, '没有权限删除此用户', 401);
+      return error(res, '没有权限删除此用户', 500);
     }
     
     const result = await userService.deleteUser(req.body.id || req.params.id);
@@ -155,19 +155,22 @@ exports.deleteUser = async (req, res) => {
 // @access  Private
 exports.uploadAvatar = async (req, res) => {
   try {
+    // 从请求体或参数中获取用户ID
+    const userId = req.body.id || req.params.id || req.user.id;
+    
     // 检查是否为管理员或本人
-    const isOwnAccount = req.params.id == req.user.id;
+    const isOwnAccount = userId == req.user.id;
     const isAdmin = req.user.role && req.user.role.name === 'admin';
     
     if (!isOwnAccount && !isAdmin) {
-      return error(res, '没有权限上传此用户头像', 401);
+      return error(res, '没有权限上传此用户头像', 500);
     }
     
     if (!req.file) {
       return error(res, '请选择要上传的头像', 400);
     }
     
-    const result = await userService.uploadAvatar(req.params.id, req.file);
+    const result = await userService.uploadAvatar(userId, req.file);
     
     if (!result.success) {
       return error(res, result.message, 404);
@@ -208,6 +211,69 @@ exports.updateUserStatus = async (req, res) => {
     return success(res, result.data, result.message);
   } catch (err) {
     console.error('更新用户状态失败:', err);
+    return error(res, '服务器错误', 500);
+  }
+};
+
+// @desc    修改密码
+// @route   POST /user/change-password
+// @access  Private
+exports.changePassword = async (req, res) => {
+  try {
+    const { id, oldPassword, newPassword } = req.body;
+    
+    // 检查是否为本人
+    const isOwnAccount = id == req.user.id;
+    
+    if (!isOwnAccount) {
+      return error(res, '只能修改自己的密码', 500);
+    }
+    
+    if (!oldPassword || !newPassword) {
+      return error(res, '请提供当前密码和新密码', 400);
+    }
+    
+    const result = await userService.changePassword(id, oldPassword, newPassword);
+    
+    if (!result.success) {
+      return error(res, result.message, 400, result.errors);
+    }
+    
+    return success(res, null, '密码修改成功');
+  } catch (err) {
+    console.error('修改密码失败:', err);
+    return error(res, '服务器错误', 500);
+  }
+};
+
+// @desc    重置用户密码（仅管理员）
+// @route   POST /user/reset-password
+// @access  Private/Admin
+exports.resetPassword = async (req, res) => {
+  try {
+    // 检查是否为管理员
+    const isAdmin = req.user.role && req.user.role.name === 'admin';
+    
+    if (!isAdmin) {
+      return error(res, '需要管理员权限', 403);
+    }
+    
+    const { id } = req.body;
+    const newPassword = 'user123'; // 直接使用固定密码
+    
+    if (!id) {
+      return error(res, '请提供用户ID', 400);
+    }
+    
+    const result = await userService.resetPassword(id, newPassword);
+    
+    if (!result.success) {
+      return error(res, result.message, 400);
+    }
+    
+    return success(res, null, '密码重置成功');
+  } catch (err) {
+    console.error('重置密码失败:', err);
     return error(res, '服务器错误', 500);
   }
 }; 

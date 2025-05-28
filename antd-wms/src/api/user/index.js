@@ -40,7 +40,7 @@ export const del = (data) => {
  * @returns 
  */
 export const updateInfo = (data) => {
-  return usePost('/user/upload/avatar', data)
+  return usePost('/user/update', data)
 }
 
 /**
@@ -59,4 +59,22 @@ export const updateStatus = (data) => {
  */
 export const resetPassword = (data) => {
   return usePost('/user/reset-password', data)
+}
+
+/**
+ * 修改密码
+ * @param {*} data 
+ * @returns 
+ */
+export const changePassword = (data) => {
+  return usePost('/user/change-password', data)
+}
+
+/**
+ * 上传头像
+ * @param {*} data 
+ * @returns 
+ */
+export const uploadAvatar = (data) => {
+  return usePost('/user/upload/avatar', data)
 }

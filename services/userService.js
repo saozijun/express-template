@@ -2,6 +2,7 @@ const User = require('../models/User');
 const fs = require('fs').promises;
 const path = require('path');
 const { Op } = require('sequelize');
+const bcrypt = require('bcryptjs');
 
 /**
  * 用户业务逻辑层
@@ -174,7 +175,6 @@ exports.updateUser = async (userId, updateData) => {
         return {
           success: false,
           message: '该邮箱已被使用',
-          errors: ['该邮箱已被使用']
         };
       }
     }
@@ -186,12 +186,21 @@ exports.updateUser = async (userId, updateData) => {
         return {
           success: false,
           message: '该用户名已被使用',
-          errors: ['该用户名已被使用']
         };
       }
     }
     
-    await user.update(updateData);
+    // 更新头像URL
+    if (updateData.avatarUrl) {
+      updateData.avatar = updateData.avatarUrl;
+      delete updateData.avatarUrl;
+    }
+    
+    // 直接使用模型的update方法
+    await User.update(updateData, {
+      where: { id: userId },
+      individualHooks: true // 确保钩子被触发
+    });
     
     // 重新获取用户信息，包含角色
     const updatedUser = await User.findByPk(userId, {
@@ -204,14 +213,11 @@ exports.updateUser = async (userId, updateData) => {
       data: updatedUser
     };
   } catch (error) {
-    console.error(`更新用户(ID: ${userId})错误:`, error);
-    
     if (error.name === 'SequelizeValidationError') {
       const messages = error.errors.map(err => err.message);
       return {
         success: false,
-        message: '验证错误',
-        errors: messages
+        message: '验证错误'
       };
     }
     
@@ -261,25 +267,43 @@ exports.uploadAvatar = async (userId, file) => {
         const oldAvatarPath = path.join(__dirname, '..', user.avatar);
         await fs.access(oldAvatarPath);
         await fs.unlink(oldAvatarPath);
-      } catch (err) {
-        console.error('删除旧头像失败:', err);
-        // 继续执行，即使删除失败
-      }
+      } catch (err) {}
     }
     
     // 更新用户头像路径
     const avatarUrl = `/uploads/avatars/${file.filename}`;
-    await user.update({ avatar: avatarUrl });
     
-    return {
-      success: true,
-      data: {
-        avatar: avatarUrl
-      },
-      message: '头像上传成功'
-    };
+    try {
+      // 使用更明确的方式更新头像
+      await User.update(
+        { avatar: avatarUrl },
+        { where: { id: userId } }
+      );
+      
+      // 验证更新是否成功
+      const updatedUser = await User.findByPk(userId);
+      if (updatedUser.avatar !== avatarUrl) {
+        return {
+          success: false,
+          message: '头像更新失败',
+        };
+      }
+      
+      return {
+        success: true,
+        data: {
+          avatar: avatarUrl
+        },
+        message: '头像上传成功'
+      };
+    } catch (updateError) {
+      return {
+        success: false,
+        message: '头像上传成功但更新用户信息失败',
+        error: updateError.message
+      };
+    }
   } catch (error) {
-    console.error(`上传头像错误:`, error);
     throw new Error(error.message);
   }
 };
@@ -302,7 +326,6 @@ exports.updateUserStatus = async (userId, status) => {
       return {
         success: false,
         message: '无效的状态值',
-        errors: ['状态必须是 active, inactive 或 banned']
       };
     }
     
@@ -319,6 +342,93 @@ exports.updateUserStatus = async (userId, status) => {
     };
   } catch (error) {
     console.error(`更新用户状态错误:`, error);
+    throw new Error(error.message);
+  }
+};
+
+// 修改密码
+exports.changePassword = async (userId, oldPassword, newPassword) => {
+  try {
+    const user = await User.findByPk(userId);
+    
+    if (!user) {
+      return {
+        success: false,
+        message: '未找到用户'
+      };
+    }
+    
+    if (!isMatch) {
+      return {
+        success: false,
+        message: '当前密码不正确',
+      };
+    }
+    
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      return {
+        success: false,
+        message: '新密码不能与当前密码相同',
+      };
+    }
+    
+    // 直接使用update方法更新密码，让模型的beforeUpdate钩子处理密码加密
+    await User.update(
+      { password: newPassword },
+      { 
+        where: { id: userId },
+        individualHooks: true // 确保钩子被触发
+      }
+    );
+    
+    // 验证密码是否更新成功
+    const updatedUser = await User.findByPk(userId);
+    const newPasswordValid = await bcrypt.compare(newPassword, updatedUser.password);
+    if (!newPasswordValid) {
+      return {
+        success: false,
+        message: '密码更新失败',
+      };
+    }
+    
+    return {
+      success: true,
+      message: '密码修改成功'
+    };
+  } catch (error) {
+    console.error(`修改密码错误:`, error);
+    throw new Error(error.message);
+  }
+};
+
+// 重置用户密码（管理员操作）
+exports.resetPassword = async (userId, newPassword) => {
+  try {
+    const user = await User.findByPk(userId);
+    
+    if (!user) {
+      return {
+        success: false,
+        message: '未找到用户'
+      };
+    }
+    
+    // 直接使用update方法重置密码，让模型的beforeUpdate钩子处理密码加密
+    await User.update(
+      { password: newPassword },
+      { 
+        where: { id: userId },
+        individualHooks: true // 确保钩子被触发
+      }
+    );
+    
+    return {
+      success: true,
+      message: '密码重置成功'
+    };
+  } catch (error) {
+    console.error(`重置密码错误:`, error);
     throw new Error(error.message);
   }
 }; 

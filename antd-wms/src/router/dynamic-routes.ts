@@ -32,6 +32,16 @@ const adminRoutes = [
       roles: ['admin', 'user'] // 所有角色可见
     },
   },
+    {
+    path: '/chat',
+    name: 'Chat', 
+    component: () => import('~/pages/chat/index.vue'),
+    meta: {
+      title: 'deepseek满血版',
+      icon: 'FundProjectionScreenOutlined',
+      roles: ['admin', 'user']
+    },
+  },
   {
     path: '/system',
     redirect: '/system/role',

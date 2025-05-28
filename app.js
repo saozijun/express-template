@@ -18,13 +18,14 @@ const errorHandler = require('./middleware/errorHandler');
 // 连接数据库
 connectDB();
 // 初始化数据库表
-initDB();
+// initDB();
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var authRouter = require('./routes/auth');
 var filesRouter = require('./routes/files');
 var rolesRouter = require('./routes/roles');
+var chatRouter = require('./routes/chat');
 
 var app = express();
 
@@ -58,6 +59,7 @@ app.use('/user', usersRouter);
 app.use('/auth', authRouter);
 app.use('/file', filesRouter);
 app.use('/role', rolesRouter);
+app.use('/chat', chatRouter);
 
 // 兼容旧路由
 app.use('/users', usersRouter);
